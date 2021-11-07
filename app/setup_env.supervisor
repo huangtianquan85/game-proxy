@@ -1,0 +1,6 @@
+[program:setup_env]
+directory   = /app
+command     = sh setup_env.sh
+autorestart = unexpected
+startsecs   = 0
+priority    = 0

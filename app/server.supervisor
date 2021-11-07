@@ -1,0 +1,4 @@
+[program:server]
+directory = /app
+command   = ./server $OFFSET
+priority  = 1
