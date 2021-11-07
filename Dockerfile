@@ -1,5 +1,12 @@
 # USAGE:
-# docker run -d -p xx:7890 -v xx:/app/domain-crt -v xx:/app/domain-key -v xx:/app/server-key -e OFFSET=1 game-proxy
+# docker run -d \
+#     -p 7890:7890 \
+#     -v xx:/app/domain.crt \
+#     -v xx:/app/domain.key \
+#     -v xx:/app/app.pem \
+#     -e DOMAIN=balabala.com \
+#     -e OFFSET=1 \
+#     game-proxy
 
 FROM dreamacro/clash
 
