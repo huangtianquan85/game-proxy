@@ -19,10 +19,10 @@ RUN apk add --no-cache supervisor \
     && sed -i 's/\[supervisord\]/\[supervisord\]\nnodaemon=true/' /etc/supervisord.conf \
     && sed -i 's/files = .*/files = \/app\/*.supervisor\n/' /etc/supervisord.conf
 
-ENTRYPOINT ["/usr/bin/supervisord"]
-
 # install nginx
 RUN apk add --no-cache nginx
 
 # install app
 COPY app /app
+
+ENTRYPOINT [ "/app/entry_point.sh" ]

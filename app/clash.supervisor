@@ -1,3 +1,2 @@
 [program:clash]
 command  = /clash -f /app/clash.conf
-priority = 1

@@ -43,7 +43,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	// return random number + offset to client
 	num += offset
-	fmt.Fprintln(w, "hello Proxy "+strconv.Itoa(num))
+	fmt.Fprintln(w, strconv.Itoa(num))
 }
 
 func main() {
