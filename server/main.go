@@ -46,46 +46,41 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, strconv.Itoa(num))
 }
 
-func main() {
-	initSuccess := false
-	for {
-		// load envionment variable OFFSET
-		var err error
-		offset, err = strconv.Atoi(os.Getenv("OFFSET"))
-		if err != nil {
-			fmt.Println("read OFFSET error")
-			break
-		}
-
-		// load key bytes
-		keyFile, err := os.Open("app.pem")
-		if err != nil {
-			fmt.Println("open key file error")
-			break
-		}
-		defer keyFile.Close()
-		st, _ := keyFile.Stat()
-		keyBytes := make([]byte, st.Size())
-		keyFile.Read(keyBytes)
-
-		// load key
-		block, _ := pem.Decode(keyBytes)
-		if block == nil {
-			fmt.Println("decode private key error")
-			break
-		}
-
-		privateKey, err = x509.ParsePKCS1PrivateKey(block.Bytes)
-		if err != nil {
-			fmt.Println("parse private key error")
-			break
-		}
-
-		initSuccess = true
-		break
+func load() error {
+	var err error
+	offset, err = strconv.Atoi(os.Getenv("OFFSET"))
+	if err != nil {
+		return fmt.Errorf("read OFFSET error %v", err)
 	}
 
-	if !initSuccess {
+	// load key bytes
+	keyFile, err := os.Open("app.pem")
+	if err != nil {
+		return fmt.Errorf("open key file error %v", err)
+	}
+	defer keyFile.Close()
+	st, _ := keyFile.Stat()
+	keyBytes := make([]byte, st.Size())
+	keyFile.Read(keyBytes)
+
+	// load key
+	block, _ := pem.Decode(keyBytes)
+	if block == nil {
+		return fmt.Errorf("decode private key error %v", err)
+	}
+
+	privateKey, err = x509.ParsePKCS1PrivateKey(block.Bytes)
+	if err != nil {
+		return fmt.Errorf("parse private key error %v", err)
+	}
+
+	return nil
+}
+
+func main() {
+	err := load()
+	if err != nil {
+		fmt.Println(err)
 		os.Exit(1)
 	}
 
