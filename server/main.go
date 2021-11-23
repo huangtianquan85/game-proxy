@@ -15,8 +15,7 @@ import (
 func makeHandler(offset int, privateKey *rsa.PrivateKey) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// read body
-		body := make([]byte, r.ContentLength)
-		r.Body.Read(body)
+		body, err := ioutil.ReadAll(r.Body)
 
 		// base64 decode
 		cipherText, err := base64.StdEncoding.DecodeString(string(body))
