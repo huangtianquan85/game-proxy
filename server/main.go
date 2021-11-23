@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"strconv"
@@ -16,25 +17,29 @@ func makeHandler(offset int, privateKey *rsa.PrivateKey) func(http.ResponseWrite
 	return func(w http.ResponseWriter, r *http.Request) {
 		// read body
 		body, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			fmt.Fprintf(w, "read body error: %v", err)
+			return
+		}
 
 		// base64 decode
 		cipherText, err := base64.StdEncoding.DecodeString(string(body))
 		if err != nil {
-			fmt.Fprintln(w, "base64 decode error")
+			fmt.Fprintf(w, "base64 decode error: %v", err)
 			return
 		}
 
 		// decrypt
 		rawData, err := rsa.DecryptPKCS1v15(rand.Reader, privateKey, cipherText)
 		if err != nil {
-			fmt.Fprintln(w, "decrypt error")
+			fmt.Fprintf(w, "decrypt error: %v", err)
 			return
 		}
 
 		// read the random number from client
 		num, err := strconv.Atoi(string(rawData))
 		if err != nil {
-			fmt.Fprintln(w, "read number error")
+			fmt.Fprintf(w, "read number error: %v", err)
 			return
 		}
 
@@ -48,13 +53,13 @@ func load() (int, *rsa.PrivateKey, error) {
 	var err error
 	offset, err := strconv.Atoi(os.Getenv("OFFSET"))
 	if err != nil {
-		return offset, nil, fmt.Errorf("read OFFSET error %v", err)
+		return offset, nil, fmt.Errorf("read OFFSET error: %v", err)
 	}
 
 	// load key bytes
 	keyFile, err := os.Open("app.pem")
 	if err != nil {
-		return offset, nil, fmt.Errorf("open key file error %v", err)
+		return offset, nil, fmt.Errorf("open key file error: %v", err)
 	}
 	defer keyFile.Close()
 	st, _ := keyFile.Stat()
@@ -64,12 +69,12 @@ func load() (int, *rsa.PrivateKey, error) {
 	// load key
 	block, _ := pem.Decode(keyBytes)
 	if block == nil {
-		return offset, nil, fmt.Errorf("decode private key error %v", err)
+		return offset, nil, fmt.Errorf("decode private key error: %v", err)
 	}
 
 	privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 	if err != nil {
-		return offset, privateKey, fmt.Errorf("parse private key error %v", err)
+		return offset, privateKey, fmt.Errorf("parse private key error: %v", err)
 	}
 
 	return offset, privateKey, nil
