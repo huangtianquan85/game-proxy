@@ -1,14 +1,19 @@
 using System;
 using System.Collections;
+using System.IO;
+using System.Linq;
+using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
 using UnityEngine;
 using UnityEngine.Networking;
 using Random = System.Random;
 
+// ReSharper disable once CheckNamespace
 public class EnvProxy : MonoBehaviour
 {
-    public static Action<int> handleEnvProxy = null;
+    public static Action<int> HandleEnvProxy = null;
+    public static Func<long, bool> IsPackageExpire = timestamp => false;
 
     private const string PubKey =
         "<RSAKeyValue>...</RSAKeyValue>";
@@ -25,10 +30,54 @@ public class EnvProxy : MonoBehaviour
         _instance = go.AddComponent<EnvProxy>();
     }
 
+    private static void CheckConfig(string data)
+    {
+        var rsa = new RSACryptoServiceProvider();
+        rsa.FromXmlString(PubKey);
+        var m = GetBigInt(rsa.ExportParameters(false).Modulus);
+        var e = GetBigInt(rsa.ExportParameters(false).Exponent);
+
+        var bytes = Convert.FromBase64String(data);
+        var cipher = new BigInteger(bytes.Append(new byte()).ToArray());
+        var bigNum = BigInteger.ModPow(cipher, e, m);
+        var num = Convert.ToInt64(bigNum.ToString());
+
+        var env = num % 10;
+        HandleEnvProxy?.Invoke((int)env);
+
+        var expTimestamp = num / 10;
+        IsPackageExpire = t => t > expTimestamp;
+    }
+
+    private static BigInteger GetBigInt(byte[] bytes)
+    {
+        bytes = bytes.Reverse().Append(new byte()).ToArray();
+        return new BigInteger(bytes);
+    }
+
     // Start is called before the first frame update
     private void Start()
     {
+        var configPath = $"{Application.streamingAssetsPath}/Config/Env.bytes";
+#if UNITY_EDITOR
+        if (File.Exists(configPath))
+        {
+            CheckConfig(File.ReadAllText(configPath));
+        }
         StartCoroutine(Send());
+#else
+        var request = UnityWebRequest.Get(configPath);
+        request.SendWebRequest().completed += (completedOp) =>
+        {
+            if (!request.isNetworkError && !request.isHttpError)
+            {
+                CheckConfig(request.downloadHandler.text);
+            }
+
+            request.Dispose();
+            StartCoroutine(Send());
+        };
+#endif
     }
 
     private static IEnumerator Send()
@@ -57,10 +106,7 @@ public class EnvProxy : MonoBehaviour
         }
         else
         {
-            if (handleEnvProxy != null)
-            {
-                handleEnvProxy(int.Parse(request.downloadHandler.text) - r);
-            }
+            HandleEnvProxy?.Invoke(int.Parse(request.downloadHandler.text) - r);
         }
     }
 }
